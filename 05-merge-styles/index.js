@@ -16,12 +16,16 @@ async function mergeCSS() {
           path.join(cssFolder, file.name),
           'utf-8',
         );
-        readStream.on('data', (chunk) => {
-          writeStream.write(chunk);
+        await new Promise((resolve, reject) => {
+          readStream.on('data', (chunk) => {
+            writeStream.write(chunk);
+          });
+          readStream.on('end', () => {
+            writeStream.write('\n');
+            resolve();
+          });
+          readStream.on('error', reject);
         });
-        // readStream.on('end', () => {
-        //   writeStream.write('\n');
-        // });
       }
     process.stdout.write('All files merged successfully.\n');
   } catch (err) {
