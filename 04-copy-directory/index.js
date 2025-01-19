@@ -4,7 +4,7 @@ const path = require('path');
 const folderFrom = path.join(__dirname, 'files');
 const folderTo = path.join(__dirname, 'files-copy');
 
-async function copyFolder(folderFrom, folderTo) {
+async function copyDir(folderFrom, folderTo) {
   try {
     await fs.rm(folderTo, { recursive: true, force: true });
     await fs.mkdir(folderTo, { recursive: true });
@@ -22,4 +22,4 @@ async function copyFolder(folderFrom, folderTo) {
   }
 }
 
-copyFolder(folderFrom, folderTo);
+copyDir(folderFrom, folderTo);

@@ -14,25 +14,39 @@ async function readFile(filename) {
   });
 }
 
-async function madeAll() {
+async function makeIndex() {
   await fs.mkdir(path.join(__dirname, 'project-dist'), { recursive: true });
 
   let template = await readFile('template.html');
-  let header = await readFile('components/header.html');
-  let articles = await readFile('components/articles.html');
-  let footer = await readFile('components/footer.html');
 
-  // Сделать универсально
-  template = template
-    .replace('{{header}}', header)
-    .replace('{{articles}}', articles)
-    .replace('{{footer}}', footer);
+  const files = await fs.readdir(path.join(__dirname, 'components'), {
+    withFileTypes: true,
+  });
+  for (const file of files)
+    if (
+      file.isFile() &&
+      path.extname(path.join(__dirname, 'components', file.name)) === '.html'
+    ) {
+      try {
+        const component = path.basename(file.name, path.extname(file.name));
+        template = template.replace(
+          `{{${component}}}`,
+          await readFile(`components/${component}.html`),
+        );
+        process.stdout.write(`${component} inserted successfully.\n`);
+      } catch (err) {
+        process.stdout.write('Something went wrong while inserting.\n');
+      }
+    }
 
   const writeStream = createWriteStream(
     path.join(__dirname, 'project-dist', 'index.html'),
   );
   writeStream.write(template);
-  writeStream.end();
+  writeStream.on('error', (err) =>
+    process.stdout.write('Error ehile creating index.html.\n', err),
+  );
+  writeStream.end(() => process.stdout.write('index.html made sucsesfull. \n'));
 }
 
 const bundle = path.join(__dirname, 'project-dist', 'style.css');
@@ -62,29 +76,37 @@ async function mergeCSS() {
       }
     process.stdout.write('All css files merged successfully.\n');
   } catch (err) {
-    process.stdout.write('Something went wrong.\n', err);
+    process.stdout.write('Something went wrong while merging.\n', err);
   }
 }
 
 const folderFrom = path.join(__dirname, 'assets');
 const folderTo = path.join(__dirname, 'project-dist', 'assets');
 
-async function copyFolder(from, to) {
+async function copyDir(from, to) {
   try {
     await fs.rm(to, { recursive: true, force: true });
     await fs.mkdir(to, { recursive: true });
     const files = await fs.readdir(from, { withFileTypes: true });
     for (const file of files)
       if (file.isFile()) {
-        fs.copyFile(path.join(from, file.name), path.join(to, file.name));
-      } else copyFolder(path.join(from, file.name), path.join(to, file.name));
+        await fs.copyFile(path.join(from, file.name), path.join(to, file.name));
+      } else
+        await copyDir(path.join(from, file.name), path.join(to, file.name));
 
-    process.stdout.write(`All files from ${from} copied successfully.\n`);
+    process.stdout.write(`Files from ${from} copied successfully.\n`);
   } catch (err) {
-    process.stdout.write('Something went wrong.\n');
+    process.stdout.write('Something went wrong while copying.\n', err.message);
   }
 }
 
-madeAll();
-mergeCSS();
-copyFolder(folderFrom, folderTo);
+(async () => {
+  try {
+    await makeIndex();
+    await mergeCSS();
+    await copyDir(folderFrom, folderTo);
+    process.stdout.write('Project built successfully.\n');
+  } catch (err) {
+    process.stderr.write(`Build process failed: ${err.message}\n`);
+  }
+})();
