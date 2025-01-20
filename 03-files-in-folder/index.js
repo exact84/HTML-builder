@@ -16,7 +16,7 @@ fs.readdir(folder, { withFileTypes: true }, (err, files) => {
             ' - ' +
             path.extname(path.join(folder, file.name)).slice(1) +
             ' - ' +
-            fileInfo.size / 1000 +
+            (fileInfo.size / 1024).toFixed(3) +
             'kb\n',
         );
       });
